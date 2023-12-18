@@ -28,7 +28,7 @@ if uploaded_file is not None:
         documents = loader.load(file_path='/home/likegiver/Desktop/codes/2023_11/nlp_final/our_work/data/'+ uploaded_file.name)
         
         text_parser = SentenceSplitter(
-            chunk_size=1024,
+            chunk_size=200,
             # separator=" ",
         )
 

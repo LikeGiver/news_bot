@@ -3,17 +3,21 @@ from streamlit.delta_generator import DeltaGenerator
 from llama_index.vector_stores import VectorStoreQuery
 
 from vector_store import get_vector_store, get_embed_model
-from client import get_client
+# from client import get_client
+import chatglm_cpp
 from conversation import postprocess_text, preprocess_text, Conversation, Role
 
 from llama_index.schema import NodeWithScore
 from typing import Optional
 
+
 MAX_LENGTH = 8192
 
 vector_store = get_vector_store()
 
-client = get_client()
+# client = get_client()
+# pipeline = chatglm_cpp.Pipeline("/home/likegiver/Desktop/codes/huggingface_models/ChatGLM3-6b-int4/chatglm3-ggml-q4_0.bin")
+pipeline = chatglm_cpp.Pipeline("/home/likegiver/Desktop/codes/huggingface_models/ChatGLM3-6b", dtype="q4_0")
 
 # Append a conversation into history, while show it in a new markdown block
 def append_conversation(
@@ -75,31 +79,58 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
         message_placeholder = placeholder.chat_message(name="assistant", avatar="assistant")
         markdown_placeholder = message_placeholder.empty()
 
+        # output_text = ''
+        # for response in client.generate_stream(
+        #     system_prompt,
+        #     tools=None, 
+        #     history=history,
+        #     do_sample=True,
+        #     max_length=MAX_LENGTH,
+        #     temperature=temperature,
+        #     top_p=top_p,
+        #     stop_sequences=[str(Role.USER)],
+        # ):
+        #     token = response.token
+        #     if response.token.special:
+        #         print("=== Output:")
+        #         print(output_text)
+
+        #         match token.text.strip():
+        #             case '<|user|>':
+        #                 break
+        #             case _:
+        #                 st.error(f'Unexpected special token: {token.text.strip()}')
+        #                 break
+        #     output_text += response.token.text
+        #     markdown_placeholder.markdown(postprocess_text(output_text + '▌'))
+        
+        # change to chatglm-6b-int4
         output_text = ''
-        for response in client.generate_stream(
-            system_prompt,
-            tools=None, 
-            history=history,
+        for response in pipeline.generate(
+            stream=True,
+            prompt=input_text,
             do_sample=True,
-            max_length=MAX_LENGTH,
-            temperature=temperature,
-            top_p=top_p,
-            stop_sequences=[str(Role.USER)],
+            # max_context_length=MAX_LENGTH,
+            # temperature=temperature,
+            # top_p=top_p,
+            num_threads=1,
         ):
-            token = response.token
-            if response.token.special:
+            token = response
+            word_stripped = token.strip()
+            if word_stripped.startswith('<|') and word_stripped.endswith('|>'):
                 print("=== Output:")
                 print(output_text)
 
-                match token.text.strip():
+                match word_stripped:
                     case '<|user|>':
                         break
                     case _:
                         st.error(f'Unexpected special token: {token.text.strip()}')
                         break
-            output_text += response.token.text
+
+            output_text += response
             markdown_placeholder.markdown(postprocess_text(output_text + '▌'))
-        
+
         append_conversation(Conversation(
             Role.ASSISTANT,
             postprocess_text(output_text),
