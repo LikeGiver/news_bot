@@ -10,7 +10,7 @@ from llama_index.schema import NodeWithScore
 from typing import Optional
 
 MAX_LENGTH = 8192
-
+RETRIEVAL_PROMPT = "下面是一段检索到的文本，它可能和用户问的问题有关，也可能无关，请自己判断是否要使用这段内容, 然后继续回复用户的问题\n"
 vector_store = get_vector_store()
 
 client = get_client()
@@ -58,7 +58,7 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
 
         for nodes_with_score in nodes_with_scores:
             if nodes_with_score.score >= 0.75:
-                append_conversation(Conversation(Role.OBSERVATION, nodes_with_score.text), history)
+                append_conversation(Conversation(Role.TOOL, RETRIEVAL_PROMPT +nodes_with_score.text), history)
         ##########END retrieval###########
 
         input_text = preprocess_text(
