@@ -6,6 +6,9 @@ from vector_store import get_vector_store, get_embed_model
 from client import get_client
 from conversation import postprocess_text, preprocess_text, Conversation, Role
 
+from llama_index.schema import NodeWithScore
+from typing import Optional
+
 MAX_LENGTH = 8192
 
 vector_store = get_vector_store()
@@ -36,7 +39,7 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
         prompt_text = prompt_text.strip()
         append_conversation(Conversation(Role.USER, prompt_text), history)
 
-        # define the retrieval part
+        ###########Define the retrieval part###########
         embed_model = get_embed_model()
         query_mode = "default"
         query_embedding = embed_model.get_query_embedding(prompt_text)
@@ -46,7 +49,17 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
         )
 
         query_result = vector_store.query(vector_store_query)
+        nodes_with_scores = []
+        for index, node in enumerate(query_result.nodes):
+            score: Optional[float] = None
+            if query_result.similarities is not None:
+                score = query_result.similarities[index]
+            nodes_with_scores.append(NodeWithScore(node=node, score=score))
 
+        for nodes_with_score in nodes_with_scores:
+            if nodes_with_score.score >= 0.75:
+                append_conversation(Conversation(Role.OBSERVATION, nodes_with_score.text), history)
+        ##########END retrieval###########
 
         input_text = preprocess_text(
             system_prompt,
