@@ -5,6 +5,11 @@ from langchain.callbacks import StreamlitCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.tools import DuckDuckGoSearchRun
 
+import os
+os.environ["https_proxy"] = "http://127.0.0.1:7890"
+os.environ["http_proxy"] = "http://127.0.0.1:7890"
+os.environ['socks_proxy'] = "http://127.0.0.1:7891"
+
 with st.sidebar:
     openai_api_key = st.text_input("OpenAI API Key or run with local LLM", key="langchain_search_api_key_openai", type="password")
 
