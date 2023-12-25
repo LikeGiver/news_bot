@@ -9,7 +9,7 @@ password = "123456"
 port = "5432"
 user = "likegiver"
 
-embed_model = HuggingFaceEmbedding(model_name="/home/likegiver/Desktop/codes/huggingface_models/m3e-base", device="cpu")
+embed_model = HuggingFaceEmbedding(model_name="/home/ubuntu/data/tyk_code/huggingface_models/m3e-base", device="cpu")
 
 vector_store = PGVectorStore.from_params(
     database=db_name,
@@ -17,7 +17,7 @@ vector_store = PGVectorStore.from_params(
     password=password,
     port=port,
     user=user,
-    table_name="2023_12_28_news",
+    table_name="2023_12_25_test2",
     embed_dim=768,  # openai embedding dimension
 )
 

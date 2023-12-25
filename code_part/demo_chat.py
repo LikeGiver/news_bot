@@ -10,7 +10,7 @@ from llama_index.schema import NodeWithScore
 from typing import Optional
 
 MAX_LENGTH = 8192
-RETRIEVAL_PROMPT = "下面是一段检索到的文本，它可能和用户问的问题有关，也可能无关，请自己判断是否要使用这段内容, 然后继续回复用户的问题\n"
+RETRIEVAL_PROMPT = "根据用户问题检索到相关信息如下，你可以使用这些信息，可以直接忽略\n"
 vector_store = get_vector_store()
 
 client = get_client()
@@ -20,9 +20,11 @@ def append_conversation(
     conversation: Conversation,
     history: list[Conversation],
     placeholder: DeltaGenerator | None=None,
+    show = True
 ) -> None:
     history.append(conversation)
-    conversation.show(placeholder)
+    if show:
+        conversation.show(placeholder)
 
 def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str):
     placeholder = st.empty()
@@ -31,13 +33,17 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
             st.session_state.chat_history = []
 
         history: list[Conversation] = st.session_state.chat_history
+        history_tmp = history.copy()
 
         for conversation in history:
             conversation.show()
 
     if prompt_text:
+        print("=== prompt_text:")
+        print(prompt_text)
+
         prompt_text = prompt_text.strip()
-        append_conversation(Conversation(Role.USER, prompt_text), history)
+        # append_conversation(Conversation(Role.USER, prompt_text), history)
 
         ###########Define the retrieval part###########
         embed_model = get_embed_model()
@@ -45,10 +51,20 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
         query_embedding = embed_model.get_query_embedding(prompt_text)
 
         vector_store_query = VectorStoreQuery(
-            query_embedding=query_embedding, similarity_top_k=2, mode=query_mode
+            query_embedding=query_embedding, similarity_top_k=5, mode=query_mode
         )
 
+        query_embedding2 = embed_model.get_query_embedding(history)
+
+        # vector_store_query2 = VectorStoreQuery(
+        #     query_embedding=query_embedding2, similarity_top_k=2, mode=query_mode
+        # )
+
+
         query_result = vector_store.query(vector_store_query)
+
+        # query_result2 = vector_store.query(vector_store_query2)
+
         nodes_with_scores = []
         for index, node in enumerate(query_result.nodes):
             score: Optional[float] = None
@@ -56,20 +72,34 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
                 score = query_result.similarities[index]
             nodes_with_scores.append(NodeWithScore(node=node, score=score))
 
+        # for index, node in enumerate(query_result2.nodes):
+        #     score: Optional[float] = None
+        #     if query_result.similarities is not None:
+        #         score = query_result.similarities[index]
+        #     nodes_with_scores.append(NodeWithScore(node=node, score=score))
+
         for nodes_with_score in nodes_with_scores:
             if nodes_with_score.score >= 0.75:
-                append_conversation(Conversation(Role.TOOL, RETRIEVAL_PROMPT +nodes_with_score.text), history)
+                print("=== retrieved_text:")
+                print(nodes_with_score.text)
+                print("=== score:")
+                print(nodes_with_score.score)
+                print("=== retrieved_text metadata:")
+                print(nodes_with_score.metadata)
+                append_conversation(Conversation(Role.TOOL, RETRIEVAL_PROMPT + "\n### data retrived \n" + nodes_with_score.text + "\n### data retrived end \n"), history_tmp, show=False)
         ##########END retrieval###########
+        append_conversation(Conversation(Role.USER, prompt_text), history_tmp, show=False)
+        append_conversation(Conversation(Role.USER, prompt_text), history)
 
         input_text = preprocess_text(
             system_prompt,
             tools=None,
-            history=history,
+            history=history_tmp,
         )
-        print("=== Input:")
-        print(input_text)
-        print("=== History:")
-        print(history)
+        # print("=== Input:")
+        # print(input_text)
+        # print("=== History:")
+        # print(history_tmp)
 
         placeholder = st.empty()
         message_placeholder = placeholder.chat_message(name="assistant", avatar="assistant")
@@ -79,7 +109,7 @@ def main(top_p: float, temperature: float, system_prompt: str, prompt_text: str)
         for response in client.generate_stream(
             system_prompt,
             tools=None, 
-            history=history,
+            history=history_tmp,
             do_sample=True,
             max_length=MAX_LENGTH,
             temperature=temperature,

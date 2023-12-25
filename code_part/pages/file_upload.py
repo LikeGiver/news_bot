@@ -8,7 +8,7 @@ from llama_hub.file.pymu_pdf.base import PyMuPDFReader
 from llama_index.node_parser.text import SentenceSplitter
 from llama_index.schema import TextNode
 
-FILE_CACHE_PATH = '/home/likegiver/Desktop/codes/2023_11/nlp_final/our_work/data/'
+FILE_CACHE_PATH = '/home/ubuntu/data/tyk_code/news_bot/data'
 
 vector_store = get_vector_store()
 
@@ -36,7 +36,7 @@ if st.button("Submit") and len(uploaded_text) > 0 :
     with open(FILE_CACHE_PATH + 'cache.txt', "r") as f:
         text_original = f.read()
 
-    text_chunks = split_text_file(text_original, separator="\n")
+    text_chunks = split_text_file(text_original, max_chars_per_file=200, separator="\n")
 
     nodes = []
     for idx, text_chunk in enumerate(text_chunks):
