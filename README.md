@@ -38,4 +38,4 @@ https://github.com/LikeGiver/news_bot
 1. 确保postgresql启动（启动一次后默认启动）
 sudo systemctl start postgresql.service
 2. streamlit run ./code_part/main.py
-3. crawler(给予playwright，注意不能开代理)
+3. crawler(基于playwright，注意不能开代理)
